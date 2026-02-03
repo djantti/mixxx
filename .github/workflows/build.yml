@@ -514,6 +514,126 @@ jobs:
           name: ${{ matrix.artifacts_name }}
           path: ${{ matrix.artifacts_path }}
 
+  build-flatpak:
+    name: "Flatpak"
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:kde-6.10
+      options: --privileged
+      volumes:
+        - /usr:/host/usr
+        - /opt:/host/opt
+    strategy:
+      matrix:
+        variant:
+          - arch: x86_64
+            runner: ubuntu-24.04
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.variant.runner }}
+    steps:
+      - name: "Recover host disk space"
+        run: |
+          rm -rf /host/opt/hostedtoolcache/CodeQL
+          rm -rf /host/opt/hostedtoolcache/go
+          rm -rf /host/usr/local/lib/android
+          rm -rf /host/usr/local/.ghcup
+          rm -rf /host/usr/local/share/powershell
+          rm -rf /host/usr/share/swift
+          rm -rf /host/usr/share/dotnet
+
+      - name: "Check out repository"
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: "Store Git version"
+        run: |
+          git config --global --add safe.directory "${GITHUB_WORKSPACE}"
+          GIT_DESC=$(git describe --always --first-parent --dirty=-modified)
+          if [ -z "$GIT_DESC" ]; then
+            GIT_DESC="unknown"
+          fi
+          echo "GIT_DESC=$GIT_DESC" >> $GITHUB_ENV
+
+      - name: "Build Flatpak"
+        uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          manifest-path: packaging/flatpak/org.mixxx.Mixxx.yaml
+          arch: ${{ matrix.variant.arch }}
+          build-bundle: false
+          upload-artifact: false
+
+      - name: "Sign repo commit"
+        if: env.RRYAN_AT_MIXXX_DOT_ORG_GPG_PRIVATE_KEY
+        run: |
+          gpg --import <(echo "${{ secrets.RRYAN_AT_MIXXX_DOT_ORG_GPG_PRIVATE_KEY }}")
+          flatpak build-sign --gpg-sign="rryan@mixxx.org" repo org.mixxx.Mixxx
+        env:
+          RRYAN_AT_MIXXX_DOT_ORG_GPG_PRIVATE_KEY: ${{ secrets.RRYAN_AT_MIXXX_DOT_ORG_GPG_PRIVATE_KEY }}
+
+      - name: "Create Flatpak bundle"
+        run: |
+          flatpak build-bundle repo \
+            --arch=${{ matrix.variant.arch }} \
+            Mixxx-${GIT_DESC}-${{ matrix.variant.arch }}.flatpak org.mixxx.Mixxx
+
+      - name: "Create Debug extension"
+        run: |
+          flatpak build-bundle repo \
+            --arch=${{ matrix.variant.arch }} \
+            --runtime Mixxx-${GIT_DESC}-${{ matrix.variant.arch }}.Debug.flatpak org.mixxx.Mixxx.Debug
+
+      - name: "Upload Flatpak bundle"
+        uses: actions/upload-artifact@v6
+        with:
+          name: Flatpak ${{ matrix.variant.arch }}
+          path: Mixxx-${{ env.GIT_DESC }}-${{ matrix.variant.arch }}.flatpak
+
+      - name: "Upload Debug extension"
+        uses: actions/upload-artifact@v6
+        with:
+          name: Flatpak Debug ${{ matrix.variant.arch }}
+          path: Mixxx-${{ env.GIT_DESC }}-${{ matrix.variant.arch }}.Debug.flatpak
+
+  publish-flatpak:
+    name: "Publish"
+    runs-on: ubuntu-latest
+    needs: build-flatpak
+    steps:
+      - name: "Install packages"
+        run: |
+          sudo apt-get update
+          sudo apt-get install flatpak ostree
+
+      - name: "Download bundles"
+        uses: actions/download-artifact@v7
+        with:
+          pattern: Flatpak*
+          path: bundles
+          merge-multiple: true
+
+      - name: "Create repo directory"
+        run: |
+          ostree --repo=${{ github.run_id }} init --mode=archive-z2
+          for file in bundles/*.flatpak; do
+            if [ -n "${{ secrets.RRYAN_AT_MIXXX_DOT_ORG_GPG_PRIVATE_KEY }}" ]; then
+              flatpak build-import-bundle \
+                --gpg-sign=${{ secrets.RRYAN_AT_MIXXX_DOT_ORG_GPG_PRIVATE_KEY }} ${{ github.run_id }} $file
+            else
+              flatpak build-import-bundle ${{ github.run_id }} $file
+            fi
+          done
+          if [ -n "${{ secrets.RRYAN_AT_MIXXX_DOT_ORG_GPG_PRIVATE_KEY }}" ]; then
+            flatpak build-update-repo repo \
+              --gpg-sign=${{ secrets.RRYAN_AT_MIXXX_DOT_ORG_GPG_PRIVATE_KEY }}
+          fi
+
+      - name: "Publish repo"
+        uses: actions/upload-artifact@v6
+        with:
+          name: Repo ${{ github.run_id }}
+          path: ${{ github.run_id }}
+
   update_manifest:
     name: "Update manifest file on download server"
     runs-on: ubuntu-latest
