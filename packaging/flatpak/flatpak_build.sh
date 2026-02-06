@@ -31,10 +31,10 @@ BUILD_OPTIONS=("--force-clean")
 print_usage() {
     echo ""
     echo "Usage:"
-    echo "  $SCRIPT  bundle [--builder] [--manifest <file>]"
-    echo "  $SCRIPT  debug [--builder] [--manifest <file>]"
+    echo "  $SCRIPT  bundle [--builder] [--gpg-sign <id>] [--manifest <file>]"
+    echo "  $SCRIPT  debug [--builder] [--gpg-sign <id>] [--manifest <file>]"
     echo "  $SCRIPT  install [--builder] [--manifest <file>]"
-    echo "  $SCRIPT  repo [--builder] [--manifest <file>]"
+    echo "  $SCRIPT  repo [--builder] [--gpg-sign <id>] [--manifest <file>]"
     echo "  $SCRIPT  -h | --help"
     echo ""
     echo "Commands:"
@@ -46,6 +46,7 @@ print_usage() {
     echo "Options:"
     echo "  -h | --help        Display this help message."
     echo "  --builder          Build using org.flatpak.Builder."
+    echo "  --gpg-sign <id>    Sign repository with a GPG key."
     echo "  --manifest <file>  Use a custom build manifest file."
 }
 
@@ -146,6 +147,24 @@ while [[ $# -gt 0 ]]; do
         --builder)
             BUILDER="org.flatpak.Builder"
             shift
+            ;;
+
+        --gpg-sign)
+            if [[ $COMMAND == "install" ]]; then
+                echo "Error: GPG signing can't be used with install command." >&2
+                print_usage >&2
+                exit 1
+            else
+                shift
+                if [ -n "$1" ]; then
+                    BUILD_OPTIONS+=("--gpg-sign=$1")
+                    shift
+                else
+                    echo "Error: GPG key id argument missing." >&2
+                    print_usage >&2
+                    exit 1
+                fi
+            fi
             ;;
 
         --manifest)

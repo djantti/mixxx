@@ -46,7 +46,9 @@ The `--debug` option installs the optional **org.kde.Sdk.Debug** extension. The 
 
 ## Building Mixxx
 
-`packaging/flatpak/flatpak_build.sh (bundle | debug | install | repo) [--builder] [--manifest <file>]`
+`packaging/flatpak/flatpak_build.sh (bundle | debug | repo) [--builder] [--gpg-sign <id>] [--manifest <file>]`
+
+`packaging/flatpak/flatpak_build.sh install [--builder] [--manifest <file>]`
 
 The build script uses subcommands for choosing between four Flatpak build variations. Note that the script places build directories and package files on the current working directory and it should be run from the root of the Mixxx source tree.
 
@@ -54,11 +56,13 @@ The build script uses subcommands for choosing between four Flatpak build variat
 
 The `--builder` option uses the **org.flatpak.Builder** Flatpak package for building Mixxx. This option automatically grants the builder filesystem access for the current and the Flatpak manifest directory.
 
+The `--gpg-sign <id>` option signs the Flatpak repository using a GPG and accepts a unique key identifier as an argument. Using a GPG key ID as the identifier is recommended. This option is not supported by **install** command.
+
 The `--manifest <file>` option accepts a custom Flatpak build manifest file as an argument. The default *packaging/flatpak/org.mixxx.Mixxx.yaml* manifest is used if this option is not passed.
 
 ## User bundle build
 
-`packaging/flatpak/flatpak_build.sh bundle [--builder] [--manifest <file>]`
+`packaging/flatpak/flatpak_build.sh bundle [--builder] [--gpg-sign <id>] [--manifest <file>]`
 
 `flatpak install [--system | --user] Mixxx.flatpak`
 
@@ -66,7 +70,7 @@ The **bundle** command builds Mixxx as a single-file Flatpak user bundle that ca
 
 ## Debug extension build
 
-`packaging/flatpak/flatpak_build.sh debug [--builder] [--manifest <file>]`
+`packaging/flatpak/flatpak_build.sh debug [--builder] [--gpg-sign <id>] [--manifest <file>]`
 
 `flatpak install [--system | --user] Mixxx.flatpak`
 
@@ -82,13 +86,15 @@ The **install** command builds and installs Mixxx directly as Flatpak applicatio
 
 ## Local Flatpak repository build
 
-`packaging/flatpak/flatpak_build.sh repo [--builder] [--manifest <file>]`
+`packaging/flatpak/flatpak_build.sh repo [--builder] [--gpg-sign <id>] [--manifest <file>]`
 
 The **repo** command builds Mixxx and creates a Flatpak repository in *flatpak_repo* directory. This directory can be used as a local repository, providing easy package installs and updates. The same directory is also created by **bundle** and **debug** build options.
 
-`flatpak --user remote-add --no-gpg-verify local-mixxx-repo ~/mixxxdj/mixxx/flatpak_repo`
+`flatpak --user remote-add [--no-gpg-verify] local-mixxx-repo ~/mixxxdj/mixxx/flatpak_repo`
 
-The example above uses **local-mixxx-repo** as repository name and *~/mixxxdj/mixxx/flatpak_repo* for location. Installing Mixxx is done by specifying the repository name and the application ID **org.mixxx.Mixxx**. Updating after a rebuild requires only the application ID.
+The example above uses **local-mixxx-repo** as repository name and *~/mixxxdj/mixxx/flatpak_repo* for location. Note that `--no-gpg-verify` option is necessary for unsigned repositories.
+
+Installing Mixxx is done by specifying the repository name and the application ID **org.mixxx.Mixxx**. Updating after a rebuild requires only the application ID.
 
 `flatpak install [--system | --user] local-mixxx-repo org.mixxx.Mixxx`
 
