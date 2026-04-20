@@ -5,6 +5,15 @@
 // Author: djantti
 //
 
+// Use crossfader calibration data stored in device memory
+const crossfaderCalibration = !!engine.getSetting("crossfaderCalibration");
+
+// Manual crossfader calibration overrides
+const crossfaderCalibrationOverride = [
+    engine.getSetting("crossfaderCalibrationLeft") || 0,
+    engine.getSetting("crossfaderCalibrationRight") || 4097
+];
+
 class TraktorZ1Class {
     constructor() {
         this.controller = new HIDController();
@@ -240,11 +249,12 @@ class TraktorZ1Class {
     }
 
     crossfaderHandler(field) {
-        // Crossfader value don't reach boundaries and need to use calibration values
-        // Also apply extra safe margins
+        // Extra safety margins for both on-device and manual crossfader calibration values
         const safeMargins = 5;
-        const min = this.calibration.crossfader.min;
-        const max = this.calibration.crossfader.max;
+
+        // Use manual overrides if on-device calibration is not enabled
+        const min = crossfaderCalibration ? this.calibration.crossfader.min : crossfaderCalibrationOverride[0];
+        const max = crossfaderCalibration ? this.calibration.crossfader.max : crossfaderCalibrationOverride[1];
         const value = script.absoluteLin(field.value, 0, 1, min + safeMargins, max - safeMargins);
         engine.setParameter(field.group, field.name, value);
     }

@@ -10,6 +10,47 @@
             <product protocol="hid" vendor_id="0x17cc" product_id="0x1210" />
         </devices>
     </info>
+    <settings>
+        <group label="Calibration">
+            <row orientation="vertical">
+                <option
+                    variable="crossfaderCalibration"
+                    type="boolean"
+                    default="true"
+                    label="Use on-device calibration data">
+                    <description>
+                        Use calibration values stored in device memory. Enabling this will disable manual calibration overrides.
+                    </description>
+                </option>
+            </row>
+            <row>
+                <option
+                    variable="crossfaderCalibrationLeft"
+                    type="integer"
+                    min="0"
+                    max="2047"
+                    step="1"
+                    default="0"
+                    label="Left crossfader cutoff point">
+                    <description>
+                        Manual calibration override for left side crossfader cutoff point.
+                    </description>
+                </option>
+                <option
+                    variable="crossfaderCalibrationRight"
+                    type="integer"
+                    min="2048"
+                    max="4095"
+                    step="1"
+                    default="4095"
+                    label="Right crossfader cutoff point">
+                    <description>
+                        Manual calibration override for right side crossfader cutoff point.
+                    </description>
+                </option>
+            </row>
+        </group>
+    </settings>
     <controller id="Traktor">
         <scriptfiles>
             <file filename="common-hid-packet-parser.js" functionprefix="" />
