@@ -54,6 +54,21 @@
                 </option>
             </row>
         </group>
+        <group label="VU meters">
+            <row>
+                <option
+                    variable="vuDecayFactor"
+                    type="enum"
+                    label="VU meter LED segment decay">
+                    <value label="Instant" default="true">0</value>
+                    <value label="Fast">0.4</value>
+                    <value label="Slow">0.7</value>
+                    <description>
+                        Controls the decay speed of VU meter segment LEDs.
+                    </description>
+                </option>
+            </row>
+        </group>
         <group label="Calibration">
             <row orientation="vertical">
                 <option

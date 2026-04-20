@@ -23,6 +23,9 @@ const inactiveBrightness = ledLevels[engine.getSetting("inactiveBrightness")] ??
 // Brightness for VU meters
 const vuBrightness = ledLevels[engine.getSetting("vuBrightness")] ?? ledLevels.max;
 
+// VU meter LED segment decay speed
+const vuDecayFactor = engine.getSetting("vuDecayFactor") || 0;
+
 // Use crossfader calibration data stored in device memory
 const crossfaderCalibration = !!engine.getSetting("crossfaderCalibration");
 
@@ -39,10 +42,24 @@ class TraktorZ1Class {
         // Modifier state
         this.modePressed = false;
 
-        // VU meters
+        // VU meter connections
         this.vuLeftConnection = {};
         this.vuRightConnection = {};
-        this.vuMeterThresholds = {"vu-30": (1 / 7), "vu-15": (2 / 7), "vu-6": (3 / 7), "vu-3": (4 / 7), "vu0": (5 / 7), "vu3": (6 / 7), "vu6": (7 / 7)};
+
+        // VU meter segment names and thresholds
+        this.vuMeterThresholds = [
+            {segment: "vu-30", threshold: 1 / 7},
+            {segment: "vu-15", threshold: 2 / 7},
+            {segment: "vu-6", threshold: 3 / 7},
+            {segment: "vu-3", threshold: 4 / 7},
+            {segment: "vu0", threshold: 5 / 7},
+            {segment: "vu3", threshold: 6 / 7},
+            {segment: "vu6", threshold: 7 / 7}
+        ];
+
+        // Stereo meter brightness data
+        this.vuMeterChannel1 = [];
+        this.vuMeterChannel2 = [];
 
         // Calibration data
         this.rawCalibration = {};
@@ -255,16 +272,23 @@ class TraktorZ1Class {
             return;
         }
 
-        const vuKeys = Object.keys(this.vuMeterThresholds);
+        // Select correct data array based on channel
+        const vuData = (group === "[Channel1]") ? this.vuMeterChannel1 : this.vuMeterChannel2;
 
-        for (let i = 0; i < vuKeys.length; ++i) {
+        for (let i = 0; i < this.vuMeterThresholds.length; ++i) {
             // Avoid spamming HID by only sending last LED update
-            const last = i === (vuKeys.length - 1);
-            if (this.vuMeterThresholds[vuKeys[i]] > value) {
-                this.controller.setOutput(group, vuKeys[i], ledLevels.off, last);
+            const last = i === (this.vuMeterThresholds.length - 1);
+
+            // Fill the data array
+            vuData[i] = vuData[i] || {segment: this.vuMeterThresholds[i].segment, brightness: 0};
+
+            // Light or fade segment according to brightness and decay settings
+            if (value >= this.vuMeterThresholds[i].threshold) {
+                vuData[i].brightness = vuBrightness;
             } else {
-                this.controller.setOutput(group, vuKeys[i], vuBrightness, last);
+                vuData[i].brightness = Math.max(0, Math.round(vuData[i].brightness * vuDecayFactor) - 1);
             }
+            this.controller.setOutput(group, vuData[i].segment, vuData[i].brightness, last);
         }
     }
 
