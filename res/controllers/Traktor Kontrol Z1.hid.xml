@@ -11,6 +11,49 @@
         </devices>
     </info>
     <settings>
+        <group label="Deck lighting">
+            <row orientation="vertical">
+                <option
+                    variable="activeBrightness"
+                    type="enum"
+                    label="Active LED brightness">
+                    <value label="Off">off</value>
+                    <value label="Low">low</value>
+                    <value label="Medium">medium</value>
+                    <value label="High">high</value>
+                    <value label="Max" default="true">max</value>
+                    <description>
+                        Controls the brightness level of active button LEDs. Switching this off will disable active button light indicators.
+                    </description>
+                </option>
+                <option
+                    variable="inactiveBrightness"
+                    type="enum"
+                    label="Inactive LED brightness">
+                    <value label="Off">off</value>
+                    <value label="Low" default="true">low</value>
+                    <value label="Medium">medium</value>
+                    <value label="High">high</value>
+                    <value label="Max">max</value>
+                    <description>
+                        Controls the brightness level of inactive button LEDs. Switching this off will disable inactive button light indicators.
+                    </description>
+                </option>
+                <option
+                    variable="vuBrightness"
+                    type="enum"
+                    label="VU meter brightness">
+                    <value label="Off">off</value>
+                    <value label="Low">low</value>
+                    <value label="Medium">medium</value>
+                    <value label="High">high</value>
+                    <value label="Max" default="true">max</value>
+                    <description>
+                        Controls the brightness level of VU meters. Switching this off will disable VU meter LEDs.
+                    </description>
+                </option>
+            </row>
+        </group>
         <group label="Calibration">
             <row orientation="vertical">
                 <option

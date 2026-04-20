@@ -5,6 +5,24 @@
 // Author: djantti
 //
 
+// LED brightness levels
+const ledLevels = {
+    off: 0x00,
+    low: 0x0A,
+    medium: 0x1F,
+    high: 0x3F,
+    max: 0x7F
+};
+
+// Brightness for active LEDs
+const activeBrightness = ledLevels[engine.getSetting("activeBrightness")] ?? ledLevels.max;
+
+// Brightness for inactive LEDs
+const inactiveBrightness = ledLevels[engine.getSetting("inactiveBrightness")] ?? ledLevels.low;
+
+// Brightness for VU meters
+const vuBrightness = ledLevels[engine.getSetting("vuBrightness")] ?? ledLevels.max;
+
 // Use crossfader calibration data stored in device memory
 const crossfaderCalibration = !!engine.getSetting("crossfaderCalibration");
 
@@ -217,13 +235,13 @@ class TraktorZ1Class {
     fxHandler(field) {
         if (field.value === 0) {
             // Always clear play indicator on button release
-            this.controller.setOutput(field.group, "play_indicator", 0x00, true);
+            this.controller.setOutput(field.group, "play_indicator", ledLevels.off, true);
             return;
         }
         // Control playback when modifier is active
         if (this.modePressed) {
             // Match play indicator (red led) brightness to fx indicator (blue led)
-            const ledBrightness = engine.getValue("[QuickEffectRack1_" + field.group + "]", "enabled") ? 0x7F : 0x0A;
+            const ledBrightness = engine.getValue("[QuickEffectRack1_" + field.group + "]", "enabled") ? activeBrightness : inactiveBrightness;
             this.controller.setOutput(field.group, "play_indicator", ledBrightness, true);
             script.toggleControl(field.group, "play");
         } else {
@@ -232,14 +250,20 @@ class TraktorZ1Class {
     }
 
     vuMeterHandler(value, group, _key) {
+        if (vuBrightness === 0) {
+            // Nothing to do if meters are disabled
+            return;
+        }
+
         const vuKeys = Object.keys(this.vuMeterThresholds);
+
         for (let i = 0; i < vuKeys.length; ++i) {
             // Avoid spamming HID by only sending last LED update
             const last = i === (vuKeys.length - 1);
             if (this.vuMeterThresholds[vuKeys[i]] > value) {
-                this.controller.setOutput(group, vuKeys[i], 0x00, last);
+                this.controller.setOutput(group, vuKeys[i], ledLevels.off, last);
             } else {
-                this.controller.setOutput(group, vuKeys[i], 0x7F, last);
+                this.controller.setOutput(group, vuKeys[i], vuBrightness, last);
             }
         }
     }
@@ -261,24 +285,25 @@ class TraktorZ1Class {
 
     outputHandler(value, group, key) {
         let ledValue;
+
         if (value === 0 || value === false) {
-            // Off value (dimmed)
-            ledValue = 0x0A;
+            // Inactive brightness value
+            ledValue = inactiveBrightness;
         } else if (value === 1 || value === true) {
-            // On value
-            ledValue = 0x7F;
+            // Active brightness value
+            ledValue = activeBrightness;
         }
         this.controller.setOutput(group, key, ledValue, true);
     }
 
     lightDeck(switchOff) {
-        let softLight = 0x0A;
-        let fullLight = 0x7F;
+        let softLight = inactiveBrightness;
+        let fullLight = activeBrightness;
         let ledBrightness;
 
         if (switchOff) {
-            softLight = 0x00;
-            fullLight = 0x00;
+            softLight = ledLevels.off;
+            fullLight = ledLevels.off;
         }
 
         this.controller.setOutput("[ControlX]", "mode", softLight, true);
