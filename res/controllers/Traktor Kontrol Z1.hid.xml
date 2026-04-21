@@ -69,6 +69,19 @@
                 </option>
             </row>
         </group>
+        <group label="Buttons">
+            <row>
+                <option
+                    variable="modeButtonLatch"
+                    type="boolean"
+                    default="false"
+                    label="Use latching mode button">
+                    <description>
+                        Keep mode button latched until the button is activated again.
+                    </description>
+                </option>
+            </row>
+        </group>
         <group label="Calibration">
             <row orientation="vertical">
                 <option

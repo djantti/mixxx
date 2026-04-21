@@ -35,12 +35,16 @@ const crossfaderCalibrationOverride = [
     engine.getSetting("crossfaderCalibrationRight") || 4097
 ];
 
+// Use latching mode button
+const modeButtonLatch = !!engine.getSetting("modeButtonLatch");
+
 class TraktorZ1Class {
     constructor() {
         this.controller = new HIDController();
 
-        // Modifier state
+        // Modifier states
         this.modePressed = false;
+        this.modeLatched = false;
 
         // VU meter connections
         this.vuLeftConnection = {};
@@ -233,6 +237,13 @@ class TraktorZ1Class {
     }
 
     modeHandler(field) {
+        if (field.value === 0 && this.modeLatched) {
+            // Nothing to do if mode button is latched
+            return;
+        } else if (field.value === 1 && modeButtonLatch) {
+            // Toggle mode latching
+            this.modeLatched = !this.modeLatched;
+        }
         this.modePressed = field.value;
         this.outputHandler(field.value, field.group, "mode");
     }
@@ -242,7 +253,7 @@ class TraktorZ1Class {
             return;
         }
         // Go to cue and stop when modifier is active
-        if (this.modePressed) {
+        if (this.modePressed || this.modeLatched) {
             engine.setValue(field.group, "cue_gotoandstop", field.value);
         } else {
             script.toggleControl(field.group, "pfl");
@@ -256,7 +267,7 @@ class TraktorZ1Class {
             return;
         }
         // Control playback when modifier is active
-        if (this.modePressed) {
+        if (this.modePressed || this.modeLatched) {
             // Match play indicator (red led) brightness to fx indicator (blue led)
             const ledBrightness = engine.getValue("[QuickEffectRack1_" + field.group + "]", "enabled") ? activeBrightness : inactiveBrightness;
             this.controller.setOutput(field.group, "play_indicator", ledBrightness, true);
