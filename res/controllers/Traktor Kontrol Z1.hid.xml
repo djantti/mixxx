@@ -80,6 +80,15 @@
                         Keep mode button latched until the button is activated again.
                     </description>
                 </option>
+                <option
+                    variable="invertControls"
+                    type="boolean"
+                    default="false"
+                    label="Invert primary and secondary button functions">
+                    <description>
+                        Use play / cue as primary functions and FX / PFL as secondary functions.
+                    </description>
+                </option>
             </row>
         </group>
         <group label="Calibration">

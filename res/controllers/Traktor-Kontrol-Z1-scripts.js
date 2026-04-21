@@ -38,6 +38,9 @@ const crossfaderCalibrationOverride = [
 // Use latching mode button
 const modeButtonLatch = !!engine.getSetting("modeButtonLatch");
 
+// Invert primary and secondary button functions
+const invertControls = !!engine.getSetting("invertControls");
+
 class TraktorZ1Class {
     constructor() {
         this.controller = new HIDController();
@@ -88,13 +91,18 @@ class TraktorZ1Class {
         // Mode button
         this.registerInputButton(InputReport0x01, "[ControlX]", "!mode", 0x1D, 0x02, this.modeHandler.bind(this));
 
-        // Headphone buttons
-        this.registerInputButton(InputReport0x01, "[Channel1]", "!pfl", 0x1D, 0x10, this.headphoneHandler.bind(this));
-        this.registerInputButton(InputReport0x01, "[Channel2]", "!pfl", 0x1D, 0x01, this.headphoneHandler.bind(this));
-
-        // FX buttons
-        this.registerInputButton(InputReport0x01, "[Channel1]", "!fx", 0x1D, 0x04, this.fxHandler.bind(this));
-        this.registerInputButton(InputReport0x01, "[Channel2]", "!fx", 0x1D, 0x08, this.fxHandler.bind(this));
+        // Select FX / play and PFL / cue button handlers based on user preferences
+        if (invertControls) {
+            this.registerInputButton(InputReport0x01, "[Channel1]", "!cue", 0x1D, 0x10, this.cueHandler.bind(this));
+            this.registerInputButton(InputReport0x01, "[Channel2]", "!cue", 0x1D, 0x01, this.cueHandler.bind(this));
+            this.registerInputButton(InputReport0x01, "[Channel1]", "!play", 0x1D, 0x04, this.playHandler.bind(this));
+            this.registerInputButton(InputReport0x01, "[Channel2]", "!play", 0x1D, 0x08, this.playHandler.bind(this));
+        } else {
+            this.registerInputButton(InputReport0x01, "[Channel1]", "!pfl", 0x1D, 0x10, this.headphoneHandler.bind(this));
+            this.registerInputButton(InputReport0x01, "[Channel2]", "!pfl", 0x1D, 0x01, this.headphoneHandler.bind(this));
+            this.registerInputButton(InputReport0x01, "[Channel1]", "!fx", 0x1D, 0x04, this.fxHandler.bind(this));
+            this.registerInputButton(InputReport0x01, "[Channel2]", "!fx", 0x1D, 0x08, this.fxHandler.bind(this));
+        }
 
         // EQ knobs
         this.registerInputScaler(InputReport0x01, "[EqualizerRack1_[Channel1]_Effect1]", "parameter3", 0x03, 0xFFFF, this.parameterHandler.bind(this));
@@ -130,8 +138,13 @@ class TraktorZ1Class {
 
         OutputReport0x80.addOutput("[ControlX]", "mode", 0x13, "B");
 
-        OutputReport0x80.addOutput("[Channel1]", "pfl", 0x0F, "B");
-        OutputReport0x80.addOutput("[Channel2]", "pfl", 0x10, "B");
+        if (invertControls) {
+            OutputReport0x80.addOutput("[Channel1]", "cue_indicator", 0x0F, "B");
+            OutputReport0x80.addOutput("[Channel2]", "cue_indicator", 0x10, "B");
+        } else {
+            OutputReport0x80.addOutput("[Channel1]", "pfl", 0x0F, "B");
+            OutputReport0x80.addOutput("[Channel2]", "pfl", 0x10, "B");
+        }
 
         OutputReport0x80.addOutput("[Channel1]", "play_indicator", 0x11, "B");
         OutputReport0x80.addOutput("[Channel2]", "play_indicator", 0x14, "B");
@@ -157,11 +170,17 @@ class TraktorZ1Class {
 
         this.controller.registerOutputPacket(OutputReport0x80);
 
-        engine.makeConnection("[QuickEffectRack1_[Channel1]]", "enabled", this.outputHandler.bind(this));
-        engine.makeConnection("[QuickEffectRack1_[Channel2]]", "enabled", this.outputHandler.bind(this));
-
-        engine.makeConnection("[Channel1]", "pfl", this.outputHandler.bind(this));
-        engine.makeConnection("[Channel2]", "pfl", this.outputHandler.bind(this));
+        if (invertControls) {
+            engine.makeConnection("[Channel1]", "cue_indicator", this.outputHandler.bind(this));
+            engine.makeConnection("[Channel2]", "cue_indicator", this.outputHandler.bind(this));
+            engine.makeConnection("[Channel1]", "play_indicator", this.outputHandler.bind(this));
+            engine.makeConnection("[Channel2]", "play_indicator", this.outputHandler.bind(this));
+        } else {
+            engine.makeConnection("[Channel1]", "pfl", this.outputHandler.bind(this));
+            engine.makeConnection("[Channel2]", "pfl", this.outputHandler.bind(this));
+            engine.makeConnection("[QuickEffectRack1_[Channel1]]", "enabled", this.outputHandler.bind(this));
+            engine.makeConnection("[QuickEffectRack1_[Channel2]]", "enabled", this.outputHandler.bind(this));
+        }
 
         this.vuLeftConnection = engine.makeUnbufferedConnection("[Channel1]", "vu_meter", this.vuMeterHandler.bind(this));
         this.vuRightConnection = engine.makeUnbufferedConnection("[Channel2]", "vu_meter", this.vuMeterHandler.bind(this));
@@ -248,32 +267,70 @@ class TraktorZ1Class {
         this.outputHandler(field.value, field.group, "mode");
     }
 
-    headphoneHandler(field) {
-        if (field.value === 0) {
-            return;
+    cueHandler(field) {
+        if (field.value === 1) {
+            if (this.modePressed || this.modeLatched) {
+                // Toggle PFL as secondary function
+                script.toggleControl(field.group, "pfl");
+                this.outputHandler(field.value, field.group, "pfl");
+            } else {
+                engine.setValue(field.group, "cue_gotoandstop", field.value);
+                this.outputHandler(field.value, field.group, "cue_indicator");
+            }
         }
-        // Go to cue and stop when modifier is active
-        if (this.modePressed || this.modeLatched) {
+    }
+
+    headphoneHandler(field) {
+        if (field.value === 1) {
+            if (this.modePressed || this.modeLatched) {
+            // Seek to cue as secondary function
             engine.setValue(field.group, "cue_gotoandstop", field.value);
+            this.controller.setOutput(field.group, "pfl", activeBrightness, true);
+            } else {
+                script.toggleControl(field.group, "pfl");
+            }
+        }
+    }
+
+    playHandler(field) {
+        if (field.value === 1) {
+            if (this.modePressed || this.modeLatched) {
+                // Use blue LED as a momentary indicator
+                this.controller.setOutput(field.group, "play_indicator", ledLevels.off, true);
+                this.controller.setOutput(`[QuickEffectRack1_${field.group}]`, "enabled", activeBrightness, true);
+                script.toggleControl(`[QuickEffectRack1_${field.group}]`, "enabled");
+            } else {
+                script.toggleControl(field.group, "play");
+            }
         } else {
-            script.toggleControl(field.group, "pfl");
+            // Always reset momentary blue indicator LED
+            this.controller.setOutput(`[QuickEffectRack1_${field.group}]`, "enabled", ledLevels.off, true);
+
+            // Restore correct red LED state
+            const ledBrightness = engine.getValue(field.group, "play") ? activeBrightness : inactiveBrightness;
+            this.controller.setOutput(field.group, "play_indicator", ledBrightness, true);
         }
     }
 
     fxHandler(field) {
-        if (field.value === 0) {
-            // Always clear play indicator on button release
-            this.controller.setOutput(field.group, "play_indicator", ledLevels.off, true);
-            return;
-        }
-        // Control playback when modifier is active
-        if (this.modePressed || this.modeLatched) {
-            // Match play indicator (red led) brightness to fx indicator (blue led)
-            const ledBrightness = engine.getValue("[QuickEffectRack1_" + field.group + "]", "enabled") ? activeBrightness : inactiveBrightness;
-            this.controller.setOutput(field.group, "play_indicator", ledBrightness, true);
-            script.toggleControl(field.group, "play");
+        if (field.value === 1) {
+            if (this.modePressed || this.modeLatched) {
+                if (engine.getValue(field.group, "track_loaded")) {
+                    // Use red LED as a momentary indicator
+                    this.controller.setOutput(`[QuickEffectRack1_${field.group}]`, "enabled", ledLevels.off, true);
+                    this.controller.setOutput(field.group, "play_indicator", activeBrightness, true);
+                    script.toggleControl(field.group, "play");
+                }
+            } else {
+                script.toggleControl(`[QuickEffectRack1_${field.group}]`, "enabled");
+            }
         } else {
-            script.toggleControl("[QuickEffectRack1_" + field.group + "]", "enabled");
+            // Always reset momentary red indicator LED
+            this.controller.setOutput(field.group, "play_indicator", ledLevels.off, true);
+
+            // Restore correct blue LED state
+            const ledBrightness = engine.getValue(`[QuickEffectRack1_${field.group}]`, "enabled") ? activeBrightness : inactiveBrightness;
+            this.controller.setOutput(`[QuickEffectRack1_${field.group}]`, "enabled", ledBrightness, true);
         }
     }
 
@@ -343,15 +400,25 @@ class TraktorZ1Class {
 
         this.controller.setOutput("[ControlX]", "mode", softLight, true);
 
-        ledBrightness = engine.getValue("[QuickEffectRack1_[Channel1]]", "enabled") ? fullLight : softLight;
-        this.controller.setOutput("[QuickEffectRack1_[Channel1]]", "enabled", ledBrightness, true);
-        ledBrightness = engine.getValue("[QuickEffectRack1_[Channel2]]", "enabled") ? fullLight : softLight;
-        this.controller.setOutput("[QuickEffectRack1_[Channel2]]", "enabled", ledBrightness, true);
+        if (invertControls) {
+            this.controller.setOutput("[Channel1]", "cue_indicator", softLight, true);
+            this.controller.setOutput("[Channel2]", "cue_indicator", softLight, true);
 
-        ledBrightness = engine.getValue("[Channel1]", "pfl") ? fullLight : softLight;
-        this.controller.setOutput("[Channel1]", "pfl", ledBrightness, true);
-        ledBrightness = engine.getValue("[Channel2]", "pfl") ? fullLight : softLight;
-        this.controller.setOutput("[Channel2]", "pfl", ledBrightness, true);
+            ledBrightness = engine.getValue("[Channel1]", "play") ? fullLight : softLight;
+            this.controller.setOutput("[Channel1]", "play_indicator", ledBrightness, true);
+            ledBrightness = engine.getValue("[Channel2]", "play") ? fullLight : softLight;
+            this.controller.setOutput("[Channel2]", "play_indicator", ledBrightness, true);
+        } else {
+            ledBrightness = engine.getValue("[Channel1]", "pfl") ? fullLight : softLight;
+            this.controller.setOutput("[Channel1]", "pfl", ledBrightness, true);
+            ledBrightness = engine.getValue("[Channel2]", "pfl") ? fullLight : softLight;
+            this.controller.setOutput("[Channel2]", "pfl", ledBrightness, true);
+
+            ledBrightness = engine.getValue("[QuickEffectRack1_[Channel1]]", "enabled") ? fullLight : softLight;
+            this.controller.setOutput("[QuickEffectRack1_[Channel1]]", "enabled", ledBrightness, true);
+            ledBrightness = engine.getValue("[QuickEffectRack1_[Channel2]]", "enabled") ? fullLight : softLight;
+            this.controller.setOutput("[QuickEffectRack1_[Channel2]]", "enabled", ledBrightness, true);
+        }
     }
 
     inputReportCallback(packet, data) {
