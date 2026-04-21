@@ -1,5 +1,5 @@
 //
-// Native Instruments Traktor Kontrol Z1 HID controller script for Mixxx 2.4
+// Native Instruments Traktor Kontrol Z1 HID controller script for Mixxx 2.5
 // -------------------------------------------------------------------------
 // Based on: NI Traktor Kontrol series scripts by leifhelm, mi01 & xeruf
 // Author: djantti
@@ -79,8 +79,11 @@ class TraktorZ1Class {
         this.calibrate();
         this.registerInputPackets();
         this.registerOutputPackets();
+        this.connectControls();
         this.readCurrentPosition();
         this.enableSoftTakeover();
+
+        this.lightDeck(inactiveBrightness, activeBrightness);
 
         console.log(this.id + " initialized");
     }
@@ -169,7 +172,9 @@ class TraktorZ1Class {
         OutputReport0x80.addOutput("[Channel2]", "vu6", 0x0E, "B");
 
         this.controller.registerOutputPacket(OutputReport0x80);
+    }
 
+    connectControls() {
         if (invertControls) {
             engine.makeConnection("[Channel1]", "cue_indicator", this.outputHandler.bind(this));
             engine.makeConnection("[Channel2]", "cue_indicator", this.outputHandler.bind(this));
@@ -184,8 +189,6 @@ class TraktorZ1Class {
 
         this.vuLeftConnection = engine.makeUnbufferedConnection("[Channel1]", "vu_meter", this.vuMeterHandler.bind(this));
         this.vuRightConnection = engine.makeUnbufferedConnection("[Channel2]", "vu_meter", this.vuMeterHandler.bind(this));
-
-        this.lightDeck(false);
     }
 
     calibrate() {
@@ -205,17 +208,18 @@ class TraktorZ1Class {
         const data = this.rawCalibration.faders;
         return {
             min: this.parseUint16Le(data, index),
-            max: this.parseUint16Le(data, index+2),
+            max: this.parseUint16Le(data, index + 2),
         };
     }
 
     parseUint16Le(data, index) {
-        return data[index] + (data[index+1]<<8);
+        return data[index] + (data[index+1] << 8);
     }
 
     readCurrentPosition() {
         // Sync on-screen controls with controller knob positions
         const report0x01 = new Uint8Array(controller.getInputReport(0x01));
+
         // The first packet is ignored by HIDController
         this.controller.parsePacket([0x01, ...Array.from(report0x01.map(x => x ^ 0xFF))]);
         this.controller.parsePacket([0x01, ...Array.from(report0x01)]);
@@ -388,15 +392,8 @@ class TraktorZ1Class {
         this.controller.setOutput(group, key, ledValue, true);
     }
 
-    lightDeck(switchOff) {
-        let softLight = inactiveBrightness;
-        let fullLight = activeBrightness;
+    lightDeck(softLight, fullLight) {
         let ledBrightness;
-
-        if (switchOff) {
-            softLight = ledLevels.off;
-            fullLight = ledLevels.off;
-        }
 
         this.controller.setOutput("[ControlX]", "mode", softLight, true);
 
@@ -431,7 +428,7 @@ class TraktorZ1Class {
 
     shutdown() {
         // Deactivate all LEDs
-        this.lightDeck(true);
+        this.lightDeck(ledLevels.off, ledLevels.off);
         console.log(this.id + " shut down");
     }
 
