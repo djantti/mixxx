@@ -41,6 +41,9 @@ const modeButtonLatch = !!engine.getSetting("modeButtonLatch");
 // Invert primary and secondary button functions
 const invertControls = !!engine.getSetting("invertControls");
 
+// Use effect rack super controls as secondary FX knob function
+const altEffectMode = !!engine.getSetting("altEffectMode");
+
 class TraktorZ1Class {
     constructor() {
         this.controller = new HIDController();
@@ -103,8 +106,8 @@ class TraktorZ1Class {
         } else {
             this.registerInputButton(InputReport0x01, "[Channel1]", "!pfl", 0x1D, 0x10, this.headphoneHandler.bind(this));
             this.registerInputButton(InputReport0x01, "[Channel2]", "!pfl", 0x1D, 0x01, this.headphoneHandler.bind(this));
-            this.registerInputButton(InputReport0x01, "[Channel1]", "!fx", 0x1D, 0x04, this.fxHandler.bind(this));
-            this.registerInputButton(InputReport0x01, "[Channel2]", "!fx", 0x1D, 0x08, this.fxHandler.bind(this));
+            this.registerInputButton(InputReport0x01, "[Channel1]", "!fx", 0x1D, 0x04, this.fxButtonHandler.bind(this));
+            this.registerInputButton(InputReport0x01, "[Channel2]", "!fx", 0x1D, 0x08, this.fxButtonHandler.bind(this));
         }
 
         // EQ knobs
@@ -116,8 +119,8 @@ class TraktorZ1Class {
         this.registerInputScaler(InputReport0x01, "[EqualizerRack1_[Channel2]_Effect1]", "parameter1", 0x11, 0xFFFF, this.parameterHandler.bind(this));
 
         // FX knobs
-        this.registerInputScaler(InputReport0x01, "[QuickEffectRack1_[Channel1]]", "super1", 0x09, 0xFFFF, this.parameterHandler.bind(this));
-        this.registerInputScaler(InputReport0x01, "[QuickEffectRack1_[Channel2]]", "super1", 0x13, 0xFFFF, this.parameterHandler.bind(this));
+        this.registerInputScaler(InputReport0x01, "[QuickEffectRack1_[Channel1]]", "super1", 0x09, 0xFFFF, this.fxKnobHandler.bind(this));
+        this.registerInputScaler(InputReport0x01, "[QuickEffectRack1_[Channel2]]", "super1", 0x13, 0xFFFF, this.fxKnobHandler.bind(this));
 
         // Gain knobs
         this.registerInputScaler(InputReport0x01, "[Channel1]", "pregain", 0x01, 0xFFFF, this.parameterHandler.bind(this));
@@ -238,6 +241,12 @@ class TraktorZ1Class {
         engine.softTakeover("[QuickEffectRack1_[Channel1]]", "super1", true);
         engine.softTakeover("[QuickEffectRack1_[Channel2]]", "super1", true);
 
+        // Alternate mode for FX knob
+        if (altEffectMode) {
+            engine.softTakeover("[EffectRack1_EffectUnit1]", "super1", true);
+            engine.softTakeover("[EffectRack1_EffectUnit2]", "super1", true);
+        }
+
         engine.softTakeover("[Channel1]", "pregain", true);
         engine.softTakeover("[Channel2]", "pregain", true);
 
@@ -316,7 +325,7 @@ class TraktorZ1Class {
         }
     }
 
-    fxHandler(field) {
+    fxButtonHandler(field) {
         if (field.value === 1) {
             if (this.modePressed || this.modeLatched) {
                 if (engine.getValue(field.group, "track_loaded")) {
@@ -335,6 +344,26 @@ class TraktorZ1Class {
             // Restore correct blue LED state
             const ledBrightness = engine.getValue(`[QuickEffectRack1_${field.group}]`, "enabled") ? activeBrightness : inactiveBrightness;
             this.controller.setOutput(`[QuickEffectRack1_${field.group}]`, "enabled", ledBrightness, true);
+        }
+    }
+
+    fxKnobHandler(field) {
+        if ((this.modePressed || this.modeLatched) && altEffectMode) {
+            // Alternate FX knob mode for effect rack super controls
+            if (field.group === "[QuickEffectRack1_[Channel1]]") {
+                engine.softTakeoverIgnoreNextValue("[QuickEffectRack1_[Channel1]]", "super1");
+                engine.setParameter("[EffectRack1_EffectUnit1]", "super1", field.value / 4095);
+            } else if (field.group === "[QuickEffectRack1_[Channel2]]") {
+                engine.softTakeoverIgnoreNextValue("[QuickEffectRack1_[Channel2]]", "super1");
+                engine.setParameter("[EffectRack1_EffectUnit2]", "super1", field.value / 4095);
+            }
+        } else {
+            if (field.group === "[QuickEffectRack1_[Channel1]]") {
+                engine.softTakeoverIgnoreNextValue("[EffectRack1_EffectUnit1]", "super1");
+            } else if (field.group === "[QuickEffectRack1_[Channel2]]") {
+                engine.softTakeoverIgnoreNextValue("[EffectRack1_EffectUnit2]", "super1");
+            }
+            engine.setParameter(field.group, field.name, field.value / 4095);
         }
     }
 

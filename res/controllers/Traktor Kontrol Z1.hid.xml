@@ -130,6 +130,17 @@
                 </option>
             </row>
         </group>
+        <group label="Advanced">
+            <option
+                variable="altEffectMode"
+                type="boolean"
+                default="false"
+                label="Enable alternate FX knob mode for effect rack super controls">
+                <description>
+                    Use FX knob to adjust effect rack super controls when modifier is active.
+                </description>
+            </option>
+        </group>
     </settings>
     <controller id="Traktor">
         <scriptfiles>
