@@ -132,7 +132,7 @@ class TraktorMX2Class {
         // Channel 1
 
         // // Channel FX
-        this.registerInputButton(inputReportButton, "EffectUnit1", "misc", 0x01, 0x01, this.fxHandler.bind(this));
+        this.registerInputButton(inputReportButton, "EffectUnit1", "misc", 0x01, 0x01, this.fxMiscHandler.bind(this));
         this.registerInputButton(inputReportButton, "EffectUnit1", "Effect1", 0x01, 0x02, this.fxHandler.bind(this));
         this.registerInputButton(inputReportButton, "EffectUnit1", "Effect2", 0x01, 0x04, this.fxHandler.bind(this));
         this.registerInputButton(inputReportButton, "EffectUnit1", "Effect3", 0x01, 0x08, this.fxHandler.bind(this));
@@ -180,7 +180,7 @@ class TraktorMX2Class {
         // Channel 2
 
         // // Channel FX
-        this.registerInputButton(inputReportButton, "EffectUnit2", "misc", 0x04, 0x40, this.fxHandler.bind(this));
+        this.registerInputButton(inputReportButton, "EffectUnit2", "misc", 0x04, 0x40, this.fxMiscHandler.bind(this));
         this.registerInputButton(inputReportButton, "EffectUnit2", "Effect1", 0x04, 0x80, this.fxHandler.bind(this));
         this.registerInputButton(inputReportButton, "EffectUnit2", "Effect2", 0x05, 0x01, this.fxHandler.bind(this));
         this.registerInputButton(inputReportButton, "EffectUnit2", "Effect3", 0x05, 0x02, this.fxHandler.bind(this));
@@ -983,9 +983,23 @@ class TraktorMX2Class {
         return nextVelocity;
     };
 
+    fxMiscHandler(field) {
+        if (field.value === 0) {
+            return;
+        }
+
+        const group = `[EffectRack1_${field.group}]`;
+
+        // Control headphone FX and chain presets using the extra FX button
+        if (!this.shiftPressed[`[Channel${field.group[field.group.length - 1]}]`]) {
+            script.toggleControl(group, "group_[Headphone]_enable");
+        } else {
+            script.triggerControl(group, "next_chain_preset");
+        }
+    };
 
     fxHandler(field) {
-        if (field.value === 0 || field.name === "misc") {
+        if (field.value === 0) {
             return;
         }
 
@@ -1235,6 +1249,8 @@ class TraktorMX2Class {
         // Link outputs to handlers
 
         // Channel 1
+        engine.makeConnection("[EffectRack1_EffectUnit1]", "group_[Headphone]_enable", this.fxMiscOutputHandler.bind(this));
+
         engine.makeConnection("[EffectRack1_EffectUnit1_Effect1]", "enabled", this.fxOutputHandler.bind(this));
         engine.makeConnection("[EffectRack1_EffectUnit1_Effect2]", "enabled", this.fxOutputHandler.bind(this));
         engine.makeConnection("[EffectRack1_EffectUnit1_Effect3]", "enabled", this.fxOutputHandler.bind(this));
@@ -1259,6 +1275,7 @@ class TraktorMX2Class {
 
 
         // Channel 2
+        engine.makeConnection("[EffectRack1_EffectUnit2]", "group_[Headphone]_enable", this.fxMiscOutputHandler.bind(this));
 
         engine.makeConnection("[EffectRack1_EffectUnit2_Effect1]", "enabled", this.fxOutputHandler.bind(this));
         engine.makeConnection("[EffectRack1_EffectUnit2_Effect2]", "enabled", this.fxOutputHandler.bind(this));
@@ -1437,6 +1454,10 @@ class TraktorMX2Class {
 
     fxSelectOutputHandler(_value, group, name) {
         this.outputHandler(engine.getValue(group, name), `[Channel${name[name.length - 9]}]`, `fx_select_${group[group.length - 2]}`);
+    };
+
+    fxMiscOutputHandler(_value, group, name) {
+        this.outputHandler(engine.getValue(group, name), `[Channel${group[group.length - 2]}]`, "fx_misc");
     };
 
     fxOutputHandler(_value, group, name) {
@@ -1690,7 +1711,7 @@ class TraktorMX2Class {
         return {
             // Channel 1
             "[Channel1]": {
-                "fx_misc": {dim: this.baseColors.dimmedOrange, full: this.baseColors.orange},
+                "fx_misc": {dim: this.baseColors.dimmedWhite, full: this.baseColors.white},
                 "fx_1": {dim: this.baseColors.dimmedOrange, full: this.baseColors.orange},
                 "fx_2": {dim: this.baseColors.dimmedOrange, full: this.baseColors.orange},
                 "fx_3": {dim: this.baseColors.dimmedOrange, full: this.baseColors.orange},
@@ -1717,7 +1738,7 @@ class TraktorMX2Class {
                 "pfl": {dim: this.baseColors.dimmedWhite, full: this.baseColors.white},
             }, // Channel 2 (same structure)
             "[Channel2]": {
-                "fx_misc": {dim: this.baseColors.dimmedOrange, full: this.baseColors.orange},
+                "fx_misc": {dim: this.baseColors.dimmedWhite, full: this.baseColors.white},
                 "fx_1": {dim: this.baseColors.dimmedOrange, full: this.baseColors.orange},
                 "fx_2": {dim: this.baseColors.dimmedOrange, full: this.baseColors.orange},
                 "fx_3": {dim: this.baseColors.dimmedOrange, full: this.baseColors.orange},
