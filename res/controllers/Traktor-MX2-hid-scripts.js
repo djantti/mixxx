@@ -112,6 +112,7 @@ class TraktorMX2Class {
         this.enableMasterGain = engine.getSetting("enableMasterGain");
         this.registerInputPackets();
         this.registerOutputPackets();
+        this.enableSoftTakeover();
 
         console.log(`${this.id} initialized`);
     }
@@ -1328,6 +1329,45 @@ class TraktorMX2Class {
 
         this.lightDeck(false);
     };
+
+    enableSoftTakeover() {
+        // Soft takeover for all knobs and faders
+        engine.softTakeover("[EffectRack1_EffectUnit1]", "mix", true);
+        engine.softTakeover("[EffectRack1_EffectUnit1_Effect1]", "meta", true);
+        engine.softTakeover("[EffectRack1_EffectUnit1_Effect2]", "meta", true);
+        engine.softTakeover("[EffectRack1_EffectUnit1_Effect3]", "meta", true);
+
+        engine.softTakeover("[EffectRack1_EffectUnit2]", "mix", true);
+        engine.softTakeover("[EffectRack1_EffectUnit2_Effect1]", "meta", true);
+        engine.softTakeover("[EffectRack1_EffectUnit2_Effect2]", "meta", true);
+        engine.softTakeover("[EffectRack1_EffectUnit2_Effect3]", "meta", true);
+
+        engine.softTakeover("[Channel1]", "pregain", true);
+        engine.softTakeover("[Channel2]", "pregain", true);
+
+        engine.softTakeover("[Master]", "gain", true);
+
+        engine.softTakeover("[EqualizerRack1_[Channel1]_Effect1]", "parameter3", true);
+        engine.softTakeover("[EqualizerRack1_[Channel1]_Effect1]", "parameter2", true);
+        engine.softTakeover("[EqualizerRack1_[Channel1]_Effect1]", "parameter1", true);
+
+        engine.softTakeover("[EqualizerRack1_[Channel2]_Effect1]", "parameter3", true);
+        engine.softTakeover("[EqualizerRack1_[Channel2]_Effect1]", "parameter2", true);
+        engine.softTakeover("[EqualizerRack1_[Channel2]_Effect1]", "parameter1", true);
+
+        engine.softTakeover("[QuickEffectRack1_[Channel1]]", "super1", true);
+        engine.softTakeover("[QuickEffectRack1_[Channel2]]", "super1", true);
+
+        engine.softTakeover("[Master]", "headMix", true);
+
+        engine.softTakeover("[Channel1]", "rate", true);
+        engine.softTakeover("[Channel2]", "rate", true);
+
+        engine.softTakeover("[Channel1]", "volume", true);
+        engine.softTakeover("[Channel2]", "volume", true);
+
+        engine.softTakeover("[Master]", "crossfader", true);
+    }
 
     /* Helper function to link output in a short form */
     linkOutput(group, name, callback) {
