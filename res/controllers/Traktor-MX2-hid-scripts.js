@@ -51,7 +51,7 @@ class TraktorMX2Class {
         this.jogModeState = {"[Channel1]": 0, "[Channel2]": 0}; // 0 = Scratch, 1 = Bend
         this.jogTimer = {"[Channel1]": 0, "[Channel2]": 0};
 
-        this.padModeState = {"[Channel1]": 0, "[Channel2]": 0}; // 0 = Hotcues, 1 = Stems, 2 = Patterns, 3 = Loops
+        this.padModeState = {"[Channel1]": 0, "[Channel2]": 0}; // 0 = Hotcues, 1 = Stems, 2 = Samples, 3 = Loops
         this.padPressed = {
             "[Channel1]": {5: false, 6: false, 7: false, 8: false},
             "[Channel2]": {5: false, 6: false, 7: false, 8: false}
@@ -101,6 +101,13 @@ class TraktorMX2Class {
             vu6: 8 / 9,
         };
 
+        // Samplers
+        this.samplerCount = 16;
+        this.samplerHotcuesRelation = {
+            "[Channel1]": {1: 1, 2: 2, 3: 3, 4: 4, 5: 9, 6: 10, 7: 11, 8: 12},
+            "[Channel2]": {1: 5, 2: 6, 3: 7, 4: 8, 5: 13, 6: 14, 7: 15, 8: 16}
+        };
+
         this.baseColors = this.getBaseColors();
         this.outputColorMap = this.getOutputColorMap();
         this.padColorMap = this.getPadColorMap();
@@ -108,6 +115,10 @@ class TraktorMX2Class {
 
     init(_id) {
         this.id = _id;
+
+        if (engine.getValue("[App]", "num_samplers") < this.samplerCount) {
+            engine.setValue("[App]", "num_samplers", this.samplerCount);
+        }
 
         this.enableMasterGain = engine.getSetting("enableMasterGain");
         this.registerInputPackets();
@@ -156,13 +167,13 @@ class TraktorMX2Class {
         this.registerInputButton(inputReportButton, "[Channel1]", "!sync_leader", 0x02, 0x40, this.masterHandler.bind(this));
         this.registerInputButton(inputReportButton, "[Channel1]", "!keylock", 0x02, 0x80, this.keylockHandler.bind(this));
 
-        // // Hotcue / Stem / Pattern / Loop Mode
+        // // Hotcue / Stem / Sample / Loop Mode
         this.registerInputButton(inputReportButton, "[Channel1]", "!hotcues", 0x03, 0x01, this.padModeHandler.bind(this));
         this.registerInputButton(inputReportButton, "[Channel1]", "!stems", 0x03, 0x02, this.padModeHandler.bind(this));
-        this.registerInputButton(inputReportButton, "[Channel1]", "!patterns", 0x03, 0x04, this.padModeHandler.bind(this));
+        this.registerInputButton(inputReportButton, "[Channel1]", "!samples", 0x03, 0x04, this.padModeHandler.bind(this));
         this.registerInputButton(inputReportButton, "[Channel1]", "!loops", 0x03, 0x08, this.padModeHandler.bind(this));
 
-        // // Pads (Hotcues, Stems, Patterns and Loops depending on current mode)
+        // // Pads (Hotcues, Stems, Samples and Loops depending on current mode)
         this.registerInputButton(inputReportButton, "[Channel1]", "!pad_1", 0x03, 0x10, this.padHandler.bind(this));
         this.registerInputButton(inputReportButton, "[Channel1]", "!pad_2", 0x03, 0x20, this.padHandler.bind(this));
         this.registerInputButton(inputReportButton, "[Channel1]", "!pad_3", 0x03, 0x40, this.padHandler.bind(this));
@@ -205,13 +216,13 @@ class TraktorMX2Class {
         this.registerInputButton(inputReportButton, "[Channel2]", "!sync_leader", 0x06, 0x10, this.masterHandler.bind(this));
         this.registerInputButton(inputReportButton, "[Channel2]", "!keylock", 0x06, 0x20, this.keylockHandler.bind(this));
 
-        // // Hotcue / Stem / Pattern / Loop Mode
+        // // Hotcue / Stem / Sample / Loop Mode
         this.registerInputButton(inputReportButton, "[Channel2]", "!hotcues", 0x06, 0x40, this.padModeHandler.bind(this));
         this.registerInputButton(inputReportButton, "[Channel2]", "!stems", 0x06, 0x80, this.padModeHandler.bind(this));
-        this.registerInputButton(inputReportButton, "[Channel2]", "!patterns", 0x07, 0x01, this.padModeHandler.bind(this));
+        this.registerInputButton(inputReportButton, "[Channel2]", "!samples", 0x07, 0x01, this.padModeHandler.bind(this));
         this.registerInputButton(inputReportButton, "[Channel2]", "!loops", 0x07, 0x02, this.padModeHandler.bind(this));
 
-        // // Pads (Hotcues, Stems, Patterns and Loops depending on current mode)
+        // // Pads (Hotcues, Stems, Samples and Loops depending on current mode)
         this.registerInputButton(inputReportButton, "[Channel2]", "!pad_1", 0x07, 0x04, this.padHandler.bind(this));
         this.registerInputButton(inputReportButton, "[Channel2]", "!pad_2", 0x07, 0x08, this.padHandler.bind(this));
         this.registerInputButton(inputReportButton, "[Channel2]", "!pad_3", 0x07, 0x10, this.padHandler.bind(this));
@@ -463,7 +474,7 @@ class TraktorMX2Class {
             this.padModeState[field.group] = 0;
             this.outputHandler(1, field.group, "hotcues");
             this.outputHandler(0, field.group, "stems");
-            this.outputHandler(0, field.group, "patterns");
+            this.outputHandler(0, field.group, "samples");
             this.outputHandler(0, field.group, "loops");
             // Light LEDs (blue for all enabled hotcues, dimmed white for disabled)
             for (let padIdx = 1; padIdx <= 8; ++padIdx) {
@@ -482,7 +493,7 @@ class TraktorMX2Class {
             this.padModeState[field.group] = 1;
             this.outputHandler(0, field.group, "hotcues");
             this.outputHandler(1, field.group, "stems");
-            this.outputHandler(0, field.group, "patterns");
+            this.outputHandler(0, field.group, "samples");
             this.outputHandler(0, field.group, "loops");
             // Light LEDs (stem color for all unmuted stems, dimmed red for muted)
             for (let stemIdx = 1; stemIdx <= engine.getValue(field.group, "stem_count"); stemIdx++) {
@@ -493,16 +504,26 @@ class TraktorMX2Class {
             }
             break;
 
-        case "!patterns":
-            // Patterns mode not implemented yet -> does nothing except lighting
+        case "!samples":
             this.padModeState[field.group] = 2;
             this.outputHandler(0, field.group, "hotcues");
             this.outputHandler(0, field.group, "stems");
-            this.outputHandler(1, field.group, "patterns");
+            this.outputHandler(1, field.group, "samples");
             this.outputHandler(0, field.group, "loops");
-            // Turn off LEDs
-            for (let padIdx = 1; padIdx <= 8; ++padIdx) {
-                this.outputHandler(0x00, field.group, `pad_${padIdx}`);
+
+            // Light LEDs for all slots with loaded samplers
+            for (const padIdx in this.samplerHotcuesRelation[field.group]) {
+                if (Object.hasOwnProperty.call(this.samplerHotcuesRelation[field.group], padIdx)) {
+                    if (engine.getValue(`[Sampler${this.samplerHotcuesRelation[field.group][padIdx]}]`, "play")) {
+                        // Use bright green LED if the sampler is playing
+                        this.outputHandler(this.baseColors.green, field.group, `pad_${padIdx}`);
+                    } else {
+                        // Select white LED brightness based on sampler state
+                        const color = engine.getValue(`[Sampler${this.samplerHotcuesRelation[field.group][padIdx]}]`, "track_loaded")
+                            ? this.baseColors.white : this.baseColors.dimmedWhite;
+                        this.outputHandler(color, field.group, `pad_${padIdx}`);
+                    }
+                }
             }
             break;
 
@@ -510,7 +531,7 @@ class TraktorMX2Class {
             this.padModeState[field.group] = 3;
             this.outputHandler(0, field.group, "hotcues");
             this.outputHandler(0, field.group, "stems");
-            this.outputHandler(0, field.group, "patterns");
+            this.outputHandler(0, field.group, "samples");
             this.outputHandler(1, field.group, "loops");
             // Turn LEDs green
             for (let padIdx = 1; padIdx <= 8; ++padIdx) {
@@ -559,9 +580,25 @@ class TraktorMX2Class {
             }
             break;
 
-        case 2:
-            // Patterns Mode
+        case 2: {
+            // Samples Mode
+            const sampler = this.samplerHotcuesRelation[field.group][padNumber];
+
+            if (this.shiftPressed[field.group]) {
+                if (engine.getValue(`[Sampler${sampler}]`, "play")) {
+                    engine.setValue(`[Sampler${sampler}]`, "cue_default", field.value);
+                } else {
+                    engine.setValue(`[Sampler${sampler}]`, "eject", field.value);
+                }
+            } else {
+                if (engine.getValue(`[Sampler${sampler}]`, "track_loaded")) {
+                    engine.setValue(`[Sampler${sampler}]`, "cue_gotoandplay", field.value);
+                } else {
+                    engine.setValue(`[Sampler${sampler}]`, "LoadSelectedTrack", field.value);
+                }
+            }
             break;
+        }
 
         case 3:
             // Loops Mode
@@ -1131,7 +1168,7 @@ class TraktorMX2Class {
 
         output.addOutput("[Channel1]", "hotcues", 0x11, "B");
         output.addOutput("[Channel1]", "stems", 0x12, "B");
-        output.addOutput("[Channel1]", "patterns", 0x13, "B");
+        output.addOutput("[Channel1]", "samples", 0x13, "B");
         output.addOutput("[Channel1]", "loops", 0x14, "B");
 
         output.addOutput("[Channel1]", "pad_1", 0x15, "B");
@@ -1173,7 +1210,7 @@ class TraktorMX2Class {
 
         output.addOutput("[Channel2]", "hotcues", 0x2f, "B");
         output.addOutput("[Channel2]", "stems", 0x30, "B");
-        output.addOutput("[Channel2]", "patterns", 0x31, "B");
+        output.addOutput("[Channel2]", "samples", 0x31, "B");
         output.addOutput("[Channel2]", "loops", 0x32, "B");
 
         output.addOutput("[Channel2]", "pad_1", 0x33, "B");
@@ -1330,6 +1367,13 @@ class TraktorMX2Class {
         engine.makeConnection("[Channel1]", "stem_count", this.patternOutputHandler.bind(this));
         engine.makeConnection("[Channel2]", "stem_count", this.patternOutputHandler.bind(this));
 
+        // Samplers
+
+        for (let padIdx = 1; padIdx <= this.samplerCount; ++padIdx) {
+            engine.makeConnection(`[Sampler${padIdx}]`, "track_loaded", this.samplerOutputHandler.bind(this));
+            engine.makeConnection(`[Sampler${padIdx}]`, "play", this.samplerOutputHandler.bind(this));
+        }
+
         // Bottom LEDs
 
         engine.makeConnection("[App]", "indicator_500ms", this.bottomLedOutputHandler.bind(this));
@@ -1475,6 +1519,57 @@ class TraktorMX2Class {
         }
     };
 
+    samplerOutputHandler(value, group, key) {
+        // Sampler 1-4, 9-12 -> Channel1
+        // Sampler 5-8, 13-16 -> Channel2
+        const sampler = this.resolveSampler(group);
+        let deck = "[Channel1]";
+        let num = sampler;
+
+        if (sampler === undefined) {
+            return;
+        } else if (sampler > 4 && sampler < 9) {
+            deck = "[Channel2]";
+            num = sampler - 4;
+        } else if (sampler > 8 && sampler < 13) {
+            num = sampler - 4;
+        } else if (sampler > 12 && sampler < 17) {
+            deck = "[Channel2]";
+            num = sampler - 8;
+        }
+
+        // Light LEDs only when we're in sampler mode
+        if (this.padModeState[deck] === 2) {
+            if (key === "play" && engine.getValue(group, "track_loaded")) {
+                if (value) {
+                    this.outputHandler(this.baseColors.green, deck, `pad_${num}`);
+                } else {
+                    this.outputHandler(this.baseColors.white, deck, `pad_${num}`);
+                }
+            } else if (key === "track_loaded") {
+                this.outputHandler(this.baseColors.white, deck, `pad_${num}`);
+            } else {
+                this.outputHandler(this.baseColors.dimmedWhite, deck, `pad_${num}`);
+            }
+        }
+    };
+
+    resolveSampler(group) {
+        if (group === undefined) {
+            return undefined;
+        }
+
+        const result = group.match(script.samplerRegEx);
+        console.log(result);
+
+        if (result === null) {
+            return undefined;
+        }
+
+        // Return sampler number
+        return result[1];
+    };
+
     hotcueOutputHandler(value, group, name) {
         // Light button LED only when we are in hotcue mode
         if (this.padModeState[group] === 0) {
@@ -1581,8 +1676,8 @@ class TraktorMX2Class {
         this.controller.setOutput("[Channel1]", "stems", getColorValue("[Channel1]", "stems", false), false);
         this.controller.setOutput("[Channel2]", "stems", getColorValue("[Channel2]", "stems", false), false);
 
-        this.controller.setOutput("[Channel1]", "patterns", getColorValue("[Channel1]", "patterns", false), false);
-        this.controller.setOutput("[Channel2]", "patterns", getColorValue("[Channel2]", "patterns", false), false);
+        this.controller.setOutput("[Channel1]", "samples", getColorValue("[Channel1]", "samples", false), false);
+        this.controller.setOutput("[Channel2]", "samples", getColorValue("[Channel2]", "samples", false), false);
 
         this.controller.setOutput("[Channel1]", "loops", getColorValue("[Channel1]", "loops", false), false);
         this.controller.setOutput("[Channel2]", "loops", getColorValue("[Channel2]", "loops", false), false);
@@ -1728,7 +1823,7 @@ class TraktorMX2Class {
                 "keylock": {dim: this.baseColors.dimmedBlue, full: this.baseColors.blue},
                 "hotcues": {dim: this.baseColors.dimmedBlue, full: this.baseColors.blue},
                 "stems": {dim: this.baseColors.dimmedBlue, full: this.baseColors.blue},
-                "patterns": {dim: this.baseColors.off, full: this.baseColors.red},
+                "samples": {dim: this.baseColors.dimmedBlue, full: this.baseColors.blue},
                 "loops": {dim: this.baseColors.dimmedBlue, full: this.baseColors.blue},
                 "cue_indicator": {dim: this.baseColors.dimmedBlue, full: this.baseColors.blue},
                 "play_indicator": {dim: this.baseColors.dimmedGreen, full: this.baseColors.green},
@@ -1755,7 +1850,7 @@ class TraktorMX2Class {
                 "keylock": {dim: this.baseColors.dimmedBlue, full: this.baseColors.blue},
                 "hotcues": {dim: this.baseColors.dimmedBlue, full: this.baseColors.blue},
                 "stems": {dim: this.baseColors.dimmedBlue, full: this.baseColors.blue},
-                "patterns": {dim: this.baseColors.off, full: this.baseColors.red},
+                "samples": {dim: this.baseColors.dimmedBlue, full: this.baseColors.blue},
                 "loops": {dim: this.baseColors.dimmedBlue, full: this.baseColors.blue},
                 "cue_indicator": {dim: this.baseColors.dimmedBlue, full: this.baseColors.blue},
                 "play_indicator": {dim: this.baseColors.dimmedGreen, full: this.baseColors.green},
