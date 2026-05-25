@@ -489,20 +489,35 @@ class TraktorMX2Class {
             }
             break;
 
-        case "!stems":
+        case "!stems": {
             this.padModeState[field.group] = 1;
             this.outputHandler(0, field.group, "hotcues");
             this.outputHandler(1, field.group, "stems");
             this.outputHandler(0, field.group, "samples");
             this.outputHandler(0, field.group, "loops");
-            // Light LEDs (stem color for all unmuted stems, dimmed red for muted)
-            for (let stemIdx = 1; stemIdx <= engine.getValue(field.group, "stem_count"); stemIdx++) {
-                const color = engine.getValue(`[Channel${field.group[field.group.length - 2]}_Stem${stemIdx}]`, "color");
-                const status = engine.getValue(`[Channel${field.group[field.group.length - 2]}_Stem${stemIdx}]`, "mute");
-                const colorValue = status ? this.baseColors.dimmedRed : this.padColorMap.getValueForNearestColor(color);
-                this.outputHandler(colorValue, field.group, `pad_${stemIdx}`);
+
+            const stemCount = engine.getValue(field.group, "stem_count");
+
+            if (stemCount === 0) {
+                // Turn off LEDs if there are no stems
+                for (let padIdx = 1; padIdx <= 8; ++padIdx) {
+                    this.outputHandler(this.baseColors.off, field.group, `pad_${padIdx}`);
+                }
+            } else {
+                // Light LEDs (stem color for all unmuted stems, dimmed red for muted)
+                for (let stemIdx = 1; stemIdx <= stemCount; stemIdx++) {
+                    const color = engine.getValue(`[Channel${field.group[field.group.length - 2]}_Stem${stemIdx}]`, "color");
+                    const status = engine.getValue(`[Channel${field.group[field.group.length - 2]}_Stem${stemIdx}]`, "mute");
+                    const colorValue = status ? this.baseColors.dimmedRed : this.padColorMap.getValueForNearestColor(color);
+                    this.outputHandler(colorValue, field.group, `pad_${stemIdx}`);
+                }
+                // Use dimmed white for any remaining pad LEDs
+                for (let padIdx = stemCount + 1; padIdx <= 8; ++padIdx) {
+                    this.outputHandler(this.baseColors.dimmedWhite, field.group, `pad_${padIdx}`);
+                }
             }
             break;
+        }
 
         case "!samples":
             this.padModeState[field.group] = 2;
@@ -1357,6 +1372,8 @@ class TraktorMX2Class {
 
         this.linkOutput("[Microphone]", "talkover", this.outputHandler.bind(this));
 
+        // Hotcues
+
         for (let padIdx = 1; padIdx <= 8; ++padIdx) {
             engine.makeConnection("[Channel1]", `hotcue_${padIdx}_status`, this.hotcueOutputHandler.bind(this));
             engine.makeConnection("[Channel2]", `hotcue_${padIdx}_status`, this.hotcueOutputHandler.bind(this));
@@ -1364,8 +1381,11 @@ class TraktorMX2Class {
             engine.makeConnection("[Channel1]", `hotcue_${padIdx}_color`, this.hotcueColorHandler.bind(this));
             engine.makeConnection("[Channel2]", `hotcue_${padIdx}_color`, this.hotcueColorHandler.bind(this));
         }
-        engine.makeConnection("[Channel1]", "stem_count", this.patternOutputHandler.bind(this));
-        engine.makeConnection("[Channel2]", "stem_count", this.patternOutputHandler.bind(this));
+
+        // Stems
+
+        engine.makeConnection("[Channel1]", "track_loaded", this.stemOutputHandler.bind(this));
+        engine.makeConnection("[Channel2]", "track_loaded", this.stemOutputHandler.bind(this));
 
         // Samplers
 
@@ -1592,13 +1612,15 @@ class TraktorMX2Class {
         }
     };
 
-    patternOutputHandler(value, group, name) {
+    stemOutputHandler(value, group, _name) {
         if (this.padModeState[group] === 1) {
-            for (let padIdx = 1; padIdx <= engine.getValue(group, name); padIdx++) {
-                const color = engine.getValue(`[Channel${group[group.length - 2]}_Stem${padIdx}]`, "color");
-                const status = engine.getValue(`[Channel${group[group.length - 2]}_Stem${padIdx}]`, "mute");
-                const colorValue = status ? this.baseColors.dimmedRed : this.padColorMap.getValueForNearestColor(color);
-                this.outputHandler(colorValue, group, `pad_${padIdx}`);
+
+            // Use red LED color when a new track is loaded
+            this.outputHandler(this.baseColors.red, group, "stems");
+
+            // Disable all pad LEDs
+            for (let padIdx = 1; padIdx <= 8; ++padIdx) {
+                this.outputHandler(this.baseColors.off, group, `pad_${padIdx}`);
             }
         }
     };
