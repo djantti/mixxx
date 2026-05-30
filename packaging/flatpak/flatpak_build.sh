@@ -31,10 +31,10 @@ BUILD_OPTIONS=("--force-clean")
 print_usage() {
     echo ""
     echo "Usage:"
-    echo "  $SCRIPT  bundle [--builder] [--manifest <file>]"
-    echo "  $SCRIPT  debug [--builder] [--manifest <file>]"
-    echo "  $SCRIPT  install [--builder] [--manifest <file>]"
-    echo "  $SCRIPT  repo [--builder] [--manifest <file>]"
+    echo "  $SCRIPT  bundle [--builder] [--disable-tests] [--manifest <file>]"
+    echo "  $SCRIPT  debug [--builder] [--disable-tests] [--manifest <file>]"
+    echo "  $SCRIPT  install [--builder] [--disable-tests] [--manifest <file>]"
+    echo "  $SCRIPT  repo [--builder] [--disable-tests] [--manifest <file>]"
     echo "  $SCRIPT  -h | --help"
     echo ""
     echo "Commands:"
@@ -46,6 +46,7 @@ print_usage() {
     echo "Options:"
     echo "  -h | --help        Display this help message."
     echo "  --builder          Build using org.flatpak.Builder."
+    echo "  --disable-tests    Disable unit tests while building."
     echo "  --manifest <file>  Use a custom build manifest file."
 }
 
@@ -145,6 +146,11 @@ while [[ $# -gt 0 ]]; do
 
         --builder)
             BUILDER="org.flatpak.Builder"
+            shift
+            ;;
+
+        --disable-tests)
+            BUILD_OPTIONS+=("--disable-tests")
             shift
             ;;
 

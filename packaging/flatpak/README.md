@@ -46,7 +46,7 @@ The `--debug` option installs the optional **org.kde.Sdk.Debug** extension. The 
 
 ## Building Mixxx
 
-`packaging/flatpak/flatpak_build.sh (bundle | debug | install | repo) [--builder] [--manifest <file>]`
+`packaging/flatpak/flatpak_build.sh (bundle | debug | install | repo) [--builder] [--disable-tests] [--manifest <file>]`
 
 The build script uses subcommands for choosing between four Flatpak build variations. Note that the script places build directories and package files on the current working directory and it should be run from the root of the Mixxx source tree.
 
@@ -54,11 +54,13 @@ The build script uses subcommands for choosing between four Flatpak build variat
 
 The `--builder` option uses the **org.flatpak.Builder** Flatpak package for building Mixxx. This option automatically grants the builder filesystem access for the current and the Flatpak manifest directory.
 
+The `--disable-tests` option prevents unit tests from running during the build. This does make the build process slightly faster, but running the tests is still recommended.
+
 The `--manifest <file>` option accepts a custom Flatpak build manifest file as an argument. The default *packaging/flatpak/org.mixxx.Mixxx.yaml* manifest is used if this option is not passed.
 
 ## User bundle build
 
-`packaging/flatpak/flatpak_build.sh bundle [--builder] [--manifest <file>]`
+`packaging/flatpak/flatpak_build.sh bundle [--builder] [--disable-tests] [--manifest <file>]`
 
 `flatpak install [--system | --user] Mixxx.flatpak`
 
@@ -66,7 +68,7 @@ The **bundle** command builds Mixxx as a single-file Flatpak user bundle that ca
 
 ## Debug extension build
 
-`packaging/flatpak/flatpak_build.sh debug [--builder] [--manifest <file>]`
+`packaging/flatpak/flatpak_build.sh debug [--builder] [--disable-tests] [--manifest <file>]`
 
 `flatpak install [--system | --user] Mixxx.flatpak`
 
@@ -76,13 +78,13 @@ The **debug** command builds the same single-file user bundle as above, but also
 
 ## Direct Flatpak install
 
-`packaging/flatpak/flatpak_build.sh install [--builder] [--manifest <file>]`
+`packaging/flatpak/flatpak_build.sh install [--builder] [--disable-tests] [--manifest <file>]`
 
 The **install** command builds and installs Mixxx directly as Flatpak application for the current user. Note that if you're building Mixxx using **org.flatpak.Builder**, a debug extension will also be installed.
 
 ## Local Flatpak repository build
 
-`packaging/flatpak/flatpak_build.sh repo [--builder] [--manifest <file>]`
+`packaging/flatpak/flatpak_build.sh repo [--builder] [--disable-tests] [--manifest <file>]`
 
 The **repo** command builds Mixxx and creates a Flatpak repository in *flatpak_repo* directory. This directory can be used as a local repository, providing easy package installs and updates. The same directory is also created by **bundle** and **debug** build options.
 
