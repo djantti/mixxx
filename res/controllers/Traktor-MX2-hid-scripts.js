@@ -1790,6 +1790,23 @@ class TraktorMX2Class {
         this.controller.setOutput("[Channel1]", "favorites", getColorValue("[Channel1]", "favorites", false), false);
         this.controller.setOutput("[Channel2]", "favorites", getColorValue("[Channel2]", "favorites", false), false);
 
+        // Disable bottom LEDs, VU meters and peak indicators when shutting down
+        if (switchOff) {
+            for (let bottomLedIdx = 1; bottomLedIdx <= 6; bottomLedIdx++) {
+                this.controller.setOutput("[Channel1]", `bottom_led_${bottomLedIdx}`, 0x00, false);
+                this.controller.setOutput("[Channel2]", `bottom_led_${bottomLedIdx}`, 0x00, false);
+            }
+
+            for (const vuKey of Object.keys(this.vuMeterThresholds)) {
+                this.controller.setOutput("[Channel1]", vuKey, 0x00, false);
+                this.controller.setOutput("[Channel2]", vuKey, 0x00, false);
+            }
+
+            this.controller.setOutput("[Main]", "peak_indicator", 0x00, false);
+            this.controller.setOutput("[Channel1]", "peak_indicator", 0x00, false);
+            this.controller.setOutput("[Channel2]", "peak_indicator", 0x00, false);
+        }
+
         // For the last output we should send the packet finally
         current = engine.getValue("[Microphone]", "talkover");
         this.controller.setOutput("[Microphone]", "talkover", getColorValue("[Microphone]", "talkover", current), true);
