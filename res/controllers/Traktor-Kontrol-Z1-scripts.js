@@ -41,6 +41,9 @@ const modeButtonLatch = !!engine.getSetting("modeButtonLatch");
 // Invert primary and secondary button functions
 const invertControls = !!engine.getSetting("invertControls");
 
+// Use soft takeover for all knobs and faders
+const softTakeover = !!engine.getSetting("softTakeover");
+
 // Use effect rack super controls as secondary FX knob function
 const altEffectMode = !!engine.getSetting("altEffectMode");
 
@@ -84,7 +87,10 @@ class TraktorZ1Class {
         this.registerOutputPackets();
         this.connectControls();
         this.readCurrentPosition();
-        this.enableSoftTakeover();
+
+        if (softTakeover) {
+            this.enableSoftTakeover();
+        }
 
         this.lightDeck(inactiveBrightness, activeBrightness);
 

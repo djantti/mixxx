@@ -132,6 +132,15 @@
         </group>
         <group label="Advanced">
             <option
+                variable="softTakeover"
+                type="boolean"
+                default="true"
+                label="Enable soft takeover for all knobs and faders">
+                <description>
+                    Ignore knob and fader movements until they pass the current on-screen value. This prevents sudden volume and FX level jumps.
+                </description>
+            </option>
+            <option
                 variable="altEffectMode"
                 type="boolean"
                 default="false"
