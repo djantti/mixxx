@@ -16,6 +16,20 @@
     </scriptfiles>
   </controller>
   <settings>
+    <group label="Rate faders">
+      <option
+          variable="rateFaderSnap"
+          type="enum"
+          label="Fader midpoint snapping">
+          <value label="Off" default="true">0</value>
+          <value label="Low">100</value>
+          <value label="Medium">200</value>
+          <value label="High">400</value>
+          <description>
+              Sets the range over which rate faders automatically snap to the midpoint."
+          </description>
+      </option>
+    </group>
     <group label="Controller modes">
       <option
         variable="enableMasterGain"

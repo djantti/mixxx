@@ -120,6 +120,9 @@ class TraktorMX2Class {
 
         /// User settings
 
+        // Rate fader mid point snap range
+        this.rateFaderSnap = Number(engine.getSetting("rateFaderSnap")) || 0;
+
         // Use master gain knob
         this.enableMasterGain = !!engine.getSetting("enableMasterGain");
 
@@ -308,8 +311,8 @@ class TraktorMX2Class {
 
         this.registerInputScaler(inputReportKnob, "[Master]", "gain", 0x25, 0xffff, this.masterGainHandler.bind(this));
 
-        this.registerInputScaler(inputReportKnob, "[Channel1]", "rate", 0x31, 0xffff, this.parameterHandler.bind(this));
-        this.registerInputScaler(inputReportKnob, "[Channel2]", "rate", 0x33, 0xffff, this.parameterHandler.bind(this));
+        this.registerInputScaler(inputReportKnob, "[Channel1]", "rate", 0x31, 0xffff, this.rateHandler.bind(this));
+        this.registerInputScaler(inputReportKnob, "[Channel2]", "rate", 0x33, 0xffff, this.rateHandler.bind(this));
 
         // FX Parameter
         this.registerInputScaler(inputReportKnob, "[EffectRack1_EffectUnit1]", "mix", 0x01, 0xffff, this.parameterHandler.bind(this));
@@ -863,6 +866,25 @@ class TraktorMX2Class {
         if (this.enableMasterGain) {
             engine.setParameter(field.group, field.name, field.value / 4095);
         }
+    };
+
+    rateHandler(field) {
+        let value = field.value;
+        const lowerSnapRange = 2047 - this.rateFaderSnap;
+        const upperSnapRange = 2047 + this.rateFaderSnap;
+
+        if (value <= lowerSnapRange) {
+            // Scale input for lower snap range
+            value = script.absoluteLin(value, -1, 0, 0, lowerSnapRange);
+        } else if (value > upperSnapRange) {
+            // Scale input for upper snap range
+            value = script.absoluteLin(value, 0, 1, upperSnapRange, 4095);
+        } else {
+            // Reset rate in center region
+            value = 0;
+        }
+
+        engine.setValue(field.group, field.name, value);
     };
 
     jogModeHandler(field) {
