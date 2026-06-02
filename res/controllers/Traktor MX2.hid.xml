@@ -18,12 +18,25 @@
   <settings>
     <group label="Controller modes">
       <option
-              variable="enableMasterGain"
-              label="Enable Master gain"
-              type="boolean"
-              description="Use Master gain knob, or send output directly to soundcard"
-              default="false"
-      />
+        variable="enableMasterGain"
+        label="Enable Master gain"
+        type="boolean"
+        default="false">
+        <description>
+          Use Master gain knob, or send output directly to soundcard.
+        </description>
+      </option>
+    </group>
+    <group label="Advanced">
+      <option
+        variable="softTakeover"
+        type="boolean"
+        default="true"
+        label="Enable soft takeover for knobs and faders">
+        <description>
+          Ignore knob and fader movements until they pass the current on-screen position. This can prevent sudden level jumps when physical and on-screen controls are out of sync.
+        </description>
+      </option>
     </group>
   </settings>
 </MixxxControllerPreset>

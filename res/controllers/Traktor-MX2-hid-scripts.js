@@ -62,8 +62,6 @@ class TraktorMX2Class {
             "[Channel2]": {1: 0x00, 2: 0x00, 3: 0x00, 4: 0x00, 5: 0x00, 6: 0x00}
         };
 
-        this.enableMasterGain = false;
-
         // Knob encoder states (hold values between 0x0 and 0xF)
         // Rotate to the right is +1 and to the left is means -1
         this.browseKnobEncoderState = {"[Channel1]": 0, "[Channel2]": 0};
@@ -120,10 +118,20 @@ class TraktorMX2Class {
             engine.setValue("[App]", "num_samplers", this.samplerCount);
         }
 
-        this.enableMasterGain = engine.getSetting("enableMasterGain");
+        /// User settings
+
+        // Use master gain knob
+        this.enableMasterGain = !!engine.getSetting("enableMasterGain");
+
+        // Enable soft takeover for knobs and faders
+        this.softTakeover = !!engine.getSetting("softTakeover");
+
         this.registerInputPackets();
         this.registerOutputPackets();
-        this.enableSoftTakeover();
+
+        if (this.softTakeover) {
+            this.enableSoftTakeover();
+        }
 
         console.log(`${this.id} initialized`);
     }
